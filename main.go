@@ -7,10 +7,33 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
-	f, err := os.Open("access.csv")
+	var outputFolderPath string
+	print("HTMLのダウンロード先フォルダを選択してください: ")
+	fmt.Scan(&outputFolderPath)
+	if !Exists(outputFolderPath) {
+		os.Exit(1)
+	}
+
+	var downloadTargetCsvPath string
+	print("ダウンロードHTMLをまとめたCSVを選択してください: ")
+	fmt.Scan(&downloadTargetCsvPath)
+	if !Exists(downloadTargetCsvPath) {
+		os.Exit(1)
+	}
+
+	var rootFolderName = time.Now().Format("20060102150405") + "_htmldownloder"
+
+	of, err := os.Create(outputFolderPath + rootFolderName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer of.Close()
+
+	f, err := os.Open(downloadTargetCsvPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,7 +56,7 @@ func main() {
 			log.Fatalf("statuscode: %v\n", res.StatusCode)
 		}
 
-		f, err := os.Create(fmt.Sprintf("output/%s.html", record[0]))
+		f, err := os.Create(fmt.Sprintf(outputFolderPath+"%s.html", record[0]))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -45,4 +68,9 @@ func main() {
 		}
 		f.Write(body)
 	}
+}
+
+func Exists(fileName string) bool {
+	_, err := os.Stat(fileName)
+	return err == nil
 }
