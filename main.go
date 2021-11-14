@@ -7,45 +7,48 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
 func main() {
 	var outputFolderPath string
-	print("HTMLのダウンロード先フォルダを選択してください: ")
+	print("Select a folder in which you download html files: ")
 	fmt.Scan(&outputFolderPath)
 	if !Exists(outputFolderPath) {
 		os.Exit(1)
 	}
 
 	var downloadTargetCsvPath string
-	print("ダウンロードHTMLをまとめたCSVを選択してください: ")
+	print("Select a CSV file: ")
 	fmt.Scan(&downloadTargetCsvPath)
 	if !Exists(downloadTargetCsvPath) {
+		fmt.Println("指定されたCSVは存在しません")
 		os.Exit(1)
 	}
 
-	var rootFolderName = time.Now().Format("20060102150405") + "_htmldownloder"
-
-	of, err := os.Create(outputFolderPath + rootFolderName)
+	outputFolderPath = filepath.Join(outputFolderPath, time.Now().Format("20060102150405")+"_htmldownloder")
+	err := os.Mkdir(outputFolderPath, 0777)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer of.Close()
 
-	f, err := os.Open(downloadTargetCsvPath)
+	csvFile, err := os.Open(downloadTargetCsvPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+	defer csvFile.Close()
 
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
+	csvContent := csv.NewReader(csvFile)
+	records, err := csvContent.ReadAll()
 	if err != nil {
 		log.Fatal()
 	}
 
+	fmt.Println("Start requests...")
 	for _, record := range records {
+		// リクエスト
 		res, err := http.Get(record[1])
 		if err != nil {
 			log.Fatal(err)
@@ -56,18 +59,33 @@ func main() {
 			log.Fatalf("statuscode: %v\n", res.StatusCode)
 		}
 
-		f, err := os.Create(fmt.Sprintf(outputFolderPath+"%s.html", record[0]))
+		// 格納フォルダ作成
+		folders := strings.Split(record[2], "\\")
+		eachRequestTargetPath := outputFolderPath
+		for _, folder := range folders {
+			eachRequestTargetPath = filepath.Join(eachRequestTargetPath, folder)
+			if !Exists(eachRequestTargetPath) {
+				err := os.Mkdir(eachRequestTargetPath, 0777)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+
+		// レスポンスボディをHTMLに詰める
+		resHtml, err := os.Create(filepath.Join(eachRequestTargetPath, fmt.Sprintf("%s.html", record[0])))
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer f.Close()
-
+		defer resHtml.Close()
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			log.Fatal(err)
 		}
-		f.Write(body)
+		resHtml.Write(body)
 	}
+
+	fmt.Println("All requests completed, htmls stored in your folders.")
 }
 
 func Exists(fileName string) bool {
