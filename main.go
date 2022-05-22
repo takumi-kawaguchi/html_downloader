@@ -14,14 +14,14 @@ import (
 
 func main() {
 	var outputFolderPath string
-	print("Select a folder in which you download html files: ")
+	print("HTMLファイルを格納するフォルダパスを入力してください: ")
 	fmt.Scan(&outputFolderPath)
 	if !Exists(outputFolderPath) {
 		os.Exit(1)
 	}
 
 	var downloadTargetCsvPath string
-	print("Select a CSV file: ")
+	print("読み込むCSVファイルのパスを入力してください: ")
 	fmt.Scan(&downloadTargetCsvPath)
 	if !Exists(downloadTargetCsvPath) {
 		fmt.Println("指定されたCSVは存在しません")
@@ -46,7 +46,7 @@ func main() {
 		log.Fatal()
 	}
 
-	fmt.Println("Start requests...")
+	fmt.Println("----- リクエスト開始 -----")
 	for _, record := range records {
 		// リクエスト
 		res, err := http.Get(record[1])
